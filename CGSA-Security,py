@@ -1,0 +1,101 @@
+mport cv2
+import time
+import threading
+
+class SistemaSeguridadCajero:
+    def __init__(self, camaras):
+        self.camaras = camaras
+        self.grabacion_activa = False
+        self.alarma_activada = False
+    
+    def iniciar_camaras(self):
+        """Inicia la transmisión de cámaras y ejecuta la evaluación de riesgos en tiempo real."""
+        for camara in self.camaras:
+            threading.Thread(target=self.monitorear_camara, args=(camara,)).start()
+    
+    def monitorear_camara(self, camara_url):
+        """Analiza video en tiempo real en busca de comportamientos sospechosos y evalúa el nivel de riesgo."""
+        cap = cv2.VideoCapture(camara_url)
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print(f"Error al conectar con la cámara {camara_url}")
+                break
+            
+            # Procesamiento de video para detección y evaluación de riesgos (CGSA-Security)
+            movimiento_sospechoso = self.detectar_movimiento(frame)
+            obstruccion = self.detectar_obstruccion(frame)
+            manipulacion = self.detectar_manipulacion(frame)
+            
+            # Evaluación del riesgo basado en el evento detectado (CGSA-Security)
+            riesgo = self.evaluar_riesgo(movimiento_sospechoso, obstruccion, manipulacion)
+            
+            # Responder según el nivel de riesgo (CGSA-Security)
+            if riesgo == "ALTO":
+                self.activar_alarma()
+                self.grabar_video(frame)
+                self.enviar_alerta_seguridad()
+            elif riesgo == "MEDIO":
+                self.grabar_video(frame)
+            elif riesgo == "BAJO":
+                print("Actividad monitoreada, sin riesgo significativo.")
+    
+    def detectar_movimiento(self, frame):
+        """Detecta movimiento anómalo mediante análisis de video en tiempo real."""
+        movimiento_detectado = False
+        # Lógica de detección de movimiento inusual, podría basarse en IA para HCSA-CCTV
+        return movimiento_detectado
+
+    def detectar_obstruccion(self, frame):
+        """Detecta si la cámara ha sido obstruida."""
+        obstruccion_detectada = False
+        # Implementación de detección de obstrucción, crucial para monitoreo CCTV (HCSA-CCTV)
+        return obstruccion_detectada
+
+    def detectar_manipulacion(self, frame):
+        """Detecta intentos de manipulación indebida en el cajero."""
+        manipulacion_detectada = False
+        # Detección de manipulación a través de visión por computadora, aplicando HCSA-CCTV
+        return manipulacion_detectada
+
+    def evaluar_riesgo(self, movimiento_sospechoso, obstruccion, manipulacion):
+        """Evalúa el nivel de riesgo de un evento, aplicando habilidades CGSA-Security."""
+        if manipulacion or obstruccion:
+            return "ALTO"
+        elif movimiento_sospechoso:
+            return "MEDIO"
+        else:
+            return "BAJO"
+    
+    def activar_alarma(self):
+        """Activa la alarma sonora y visual para incidentes de riesgo alto."""
+        if not self.alarma_activada:
+            print("⚠️ Alarma activada: posible robo en curso ⚠️")
+            self.alarma_activada = True
+            # Integrar hardware para activar sirena o luces de alerta (CGSA-Security)
+
+    def grabar_video(self, frame):
+        """Inicia o continúa la grabación del video del evento."""
+        if not self.grabacion_activa:
+            self.grabacion_activa = True
+            print("Grabación iniciada para evidencia del incidente.")
+            # Código para grabar video o transmitir a un servidor para HCSA-CCTV
+
+    def enviar_alerta_seguridad(self):
+        """Envía alertas automáticas al equipo de seguridad y a la policía (CGSA-Security)."""
+        print("📞 Contactando a seguridad y policía 📞")
+        # Enviar mensajes automáticos o hacer una llamada al número de emergencia
+        # Además, enviar video en tiempo real a seguridad en dispositivos móviles
+
+# Ejemplo de URLs de cámaras IP (configuración para vigilancia CCTV, HCSA-CCTV)
+camaras_ip = [
+    "http://192.168.1.10:8080/video",
+    "http://192.168.1.11:8080/video",
+    "http://192.168.1.12:8080/video",
+    "http://192.168.1.13:8080/video"
+]
+
+# Inicializar el sistema de seguridad
+sistema_seguridad = SistemaSeguridadCajero(camaras_ip)
+sistema_seguridad.iniciar_camaras()
