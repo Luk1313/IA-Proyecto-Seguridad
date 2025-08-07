@@ -1,3 +1,9 @@
+"""
+Sistema Bancario Seguro con Hashing, Bloqueo, Control de Sesiones y Validación Segura.
+Autor: Lucas Rapiman
+Repositorio: https://github.com/Luk1313/Lu
+"""
+
 import hashlib
 import time
 import random
@@ -8,150 +14,145 @@ class SistemaBancario:
         self.cuentas = {}
         self.intentos_fallidos = {}
         self.sesiones_activas = {}
-    
+
+    # --- SEGURIDAD Y GESTIÓN DE CONTRASEÑAS ---
+
     def generar_salt(self, length=16):
-        """Genera un salt para hashear contraseñas"""
-        return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
-    
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
     def hashear_contraseña(self, contraseña, salt):
-        """Hashea la contraseña usando un salt"""
         return hashlib.sha256((contraseña + salt).encode()).hexdigest()
 
     def es_contraseña_segura(self, contraseña):
-        """
-        Verifica si la contraseña es segura.
-        """
-        assert len(contraseña) > 0, "La contraseña no debe estar vacía."
-        tiene_mayuscula = any(c.isupper() for c in contraseña)
-        tiene_minuscula = any(c.islower() for c in contraseña)
-        tiene_numero = any(c.isdigit() for c in contraseña)
-        return tiene_mayuscula and tiene_minuscula and tiene_numero
-    
+        assert contraseña, "La contraseña no debe estar vacía."
+        return (
+            any(c.isupper() for c in contraseña) and
+            any(c.islower() for c in contraseña) and
+            any(c.isdigit() for c in contraseña)
+        )
+
+    # --- BLOQUEO DE CUENTAS ---
+
     def bloquear_cuenta(self, numero_cuenta, tiempo_bloqueo=30):
-        """Bloquea temporalmente una cuenta después de intentos fallidos"""
         self.intentos_fallidos[numero_cuenta] = time.time() + tiempo_bloqueo
-        print(f"La cuenta {numero_cuenta} ha sido bloqueada temporalmente.")
+        print(f"\n[!] Cuenta {numero_cuenta} bloqueada temporalmente por seguridad.")
 
     def verificar_bloqueo(self, numero_cuenta):
-        """Verifica si la cuenta está bloqueada y si el bloqueo ha expirado"""
         if numero_cuenta in self.intentos_fallidos:
             if time.time() < self.intentos_fallidos[numero_cuenta]:
-                print("Cuenta bloqueada temporalmente. Inténtalo más tarde.")
+                print("\n[!] Cuenta bloqueada. Intenta nuevamente más tarde.")
                 return True
-            else:
-                del self.intentos_fallidos[numero_cuenta]
+            del self.intentos_fallidos[numero_cuenta]
         return False
-    
+
+    # --- MODELO DE CUENTA ---
+
     class Cuenta:
-        def __init__(self, numero_cuenta, titular, saldo_inicial, tipo_cuenta, contraseña, salt):
+        def __init__(self, numero_cuenta, titular, saldo_inicial, tipo_cuenta, contraseña_hash, salt):
             assert saldo_inicial >= 0, "El saldo inicial no puede ser negativo."
             self.numero_cuenta = numero_cuenta
             self.titular = titular
             self.saldo = saldo_inicial
             self.tipo_cuenta = tipo_cuenta
-            self.contraseña_hash = contraseña
+            self.contraseña_hash = contraseña_hash
             self.salt = salt
 
         def depositar(self, cantidad):
-            assert cantidad > 0, "La cantidad a depositar debe ser positiva."
+            assert cantidad > 0, "El depósito debe ser mayor que 0."
             self.saldo += cantidad
-            print(f"Se han depositado {cantidad}. Nuevo saldo: {self.saldo}")
+            print(f"\n[+] Depósito exitoso: ${cantidad:.2f}. Nuevo saldo: ${self.saldo:.2f}")
 
         def retirar(self, cantidad):
-            assert cantidad > 0, "La cantidad a retirar debe ser positiva."
+            assert cantidad > 0, "El retiro debe ser mayor que 0."
             if cantidad <= self.saldo:
                 self.saldo -= cantidad
-                print(f"Se han retirado {cantidad}. Nuevo saldo: {self.saldo}")
+                print(f"\n[-] Retiro exitoso: ${cantidad:.2f}. Saldo restante: ${self.saldo:.2f}")
             else:
-                print(f"Saldo insuficiente para retirar {cantidad}. Saldo actual: {self.saldo}")
+                print(f"\n[!] Saldo insuficiente. Saldo actual: ${self.saldo:.2f}")
 
         def obtener_balance(self):
             return self.saldo
 
         def __str__(self):
-            return (f"Número de cuenta: {self.numero_cuenta}\n"
-                    f"Titular: {self.titular}\n"
-                    f"Saldo actual: {self.saldo}\n"
-                    f"Tipo de cuenta: {self.tipo_cuenta}")
+            return f"Cuenta: {self.numero_cuenta}\nTitular: {self.titular}\nTipo: {self.tipo_cuenta}\nSaldo: ${self.saldo:.2f}"
+
+    # --- FLUJO DE CREACIÓN E INICIO DE SESIÓN ---
 
     def crear_cuenta(self):
-        numero_cuenta = input("Introduce el número de cuenta: ")
-        titular = input("Introduce el nombre del titular: ")
-        saldo_inicial = float(input("Introduce el saldo inicial: "))
-        tipo_cuenta = input("Introduce el tipo de cuenta (Ahorros/Corriente): ")
-        contraseña = input("Introduce una contraseña: ")
-        
+        print("\n>>> Crear Nueva Cuenta <<<")
+        numero_cuenta = input("Número de cuenta: ")
+        titular = input("Nombre del titular: ")
+        saldo_inicial = float(input("Saldo inicial: "))
+        tipo_cuenta = input("Tipo de cuenta (Ahorros/Corriente): ")
+        contraseña = input("Contraseña: ")
+
         if not self.es_contraseña_segura(contraseña):
-            print("La contraseña no es segura. Debe tener al menos una mayúscula, una minúscula y un número.")
-            return None
-        
+            print("\n[!] Contraseña no segura. Usa mayúscula, minúscula y número.")
+            return
+
         salt = self.generar_salt()
-        contraseña_hash = self.hashear_contraseña(contraseña, salt)
-        cuenta = self.Cuenta(numero_cuenta, titular, saldo_inicial, tipo_cuenta, contraseña_hash, salt)
+        hash_final = self.hashear_contraseña(contraseña, salt)
+        cuenta = self.Cuenta(numero_cuenta, titular, saldo_inicial, tipo_cuenta, hash_final, salt)
         self.cuentas[numero_cuenta] = cuenta
-        print("Cuenta creada exitosamente.")
-        return cuenta
-    
+        print("\n[+] Cuenta creada exitosamente.")
+
     def iniciar_sesion(self, numero_cuenta, contraseña):
-        """Inicia sesión si la contraseña es correcta y no está bloqueada"""
         if self.verificar_bloqueo(numero_cuenta):
             return None
-        
+
         cuenta = self.cuentas.get(numero_cuenta)
         if cuenta:
-            contraseña_hash = self.hashear_contraseña(contraseña, cuenta.salt)
-            if contraseña_hash == cuenta.contraseña_hash:
-                token_sesion = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-                self.sesiones_activas[numero_cuenta] = token_sesion
-                print("Inicio de sesión exitoso.")
-                return token_sesion
+            hash_ingresado = self.hashear_contraseña(contraseña, cuenta.salt)
+            if hash_ingresado == cuenta.contraseña_hash:
+                token = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+                self.sesiones_activas[numero_cuenta] = token
+                print("\n[+] Inicio de sesión exitoso.")
+                return token
             else:
-                print("Contraseña incorrecta.")
+                print("\n[!] Contraseña incorrecta.")
                 self.bloquear_cuenta(numero_cuenta)
         else:
-            print("Número de cuenta no encontrado.")
+            print("\n[!] Cuenta no encontrada.")
         return None
 
-    def verificar_sesion(self, numero_cuenta, token_sesion):
-        """Verifica que el token de sesión esté activo para la cuenta dada"""
-        return self.sesiones_activas.get(numero_cuenta) == token_sesion
+    def verificar_sesion(self, numero_cuenta, token):
+        return self.sesiones_activas.get(numero_cuenta) == token
 
-    def gestionar_cuenta(self, numero_cuenta, token_sesion):
-        """Permite al usuario realizar operaciones bancarias después de iniciar sesión"""
-        if not self.verificar_sesion(numero_cuenta, token_sesion):
-            print("Sesión no válida o expirada. Inicie sesión nuevamente.")
+    # --- OPERACIONES BANCARIAS ---
+
+    def gestionar_cuenta(self, numero_cuenta, token):
+        if not self.verificar_sesion(numero_cuenta, token):
+            print("\n[!] Sesion inválida. Inicia sesión nuevamente.")
             return
-        
+
         cuenta = self.cuentas[numero_cuenta]
         while True:
-            accion = input("¿Deseas depositar (d), retirar (r) o consultar saldo (s)? (o 'salir' para terminar): ").lower()
-            if accion == 'd':
-                cantidad = float(input("Introduce la cantidad a depositar: "))
+            print("\n>>> Opciones: [d]epositar | [r]etirar | [s]aldo | [salir]")
+            opcion = input("Acción: ").lower()
+
+            if opcion == 'd':
+                cantidad = float(input("Cantidad a depositar: "))
                 cuenta.depositar(cantidad)
-            elif accion == 'r':
-                cantidad = float(input("Introduce la cantidad a retirar: "))
+            elif opcion == 'r':
+                cantidad = float(input("Cantidad a retirar: "))
                 cuenta.retirar(cantidad)
-            elif accion == 's':
-                print(f"Saldo actual: {cuenta.obtener_balance()}")
-            elif accion == 'salir':
+            elif opcion == 's':
+                print(f"\n[=] Saldo actual: ${cuenta.obtener_balance():.2f}")
+            elif opcion == 'salir':
                 del self.sesiones_activas[numero_cuenta]
-                print("Sesión cerrada.")
+                print("\n[*] Sesión finalizada.")
                 break
             else:
-                print("Acción no válida.")
+                print("\n[!] Opción no reconocida.")
 
 
-# Ejemplo de uso del sistema bancario
+# --- FLUJO PRINCIPAL ---
 sistema = SistemaBancario()
 
-# Crear una cuenta
 sistema.crear_cuenta()
+num = input("\nNúmero de cuenta para iniciar sesión: ")
+clave = input("Contraseña: ")
+token = sistema.iniciar_sesion(num, clave)
+if token:
+    sistema.gestionar_cuenta(num, token)
 
-# Iniciar sesión
-numero_cuenta = input("Introduce el número de cuenta para iniciar sesión: ")
-contraseña = input("Introduce tu contraseña: ")
-token_sesion = sistema.iniciar_sesion(numero_cuenta, contraseña)
-
-# Gestionar la cuenta si el inicio de sesión es exitoso
-if token_sesion:
-    sistema.gestionar_cuenta(numero_cuenta, token_sesion)
